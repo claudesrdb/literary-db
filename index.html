@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d0c09">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="文庫DB">
+<meta name="mobile-web-app-capable" content="yes">
+<title>文庫リサーチDB</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;800&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --ink: #0d0c09;
+  --paper: #f5f0e8;
+  --bg: #111009;
+  --bg2: #1a1810;
+  --bg3: #221f16;
+  --border: #2e2a1e;
+  --border2: #3d3828;
+  --gold: #c9953c;
+  --gold-dim: #7a5a1e;
+  --text: #e8dcc8;
+  --text-dim: #9a8a6e;
+  --text-muted: #5a5040;
+  --green: #5a8c5a;
+  --green-bg: #0e1a0e;
+  --red: #8c3a3a;
+  --red-bg: #1a0e0e;
+  --blue: #4a7a9b;
+  --blue-bg: #0e1520;
+  --amber: #b87820;
+  --teal: #3a7a70;
+  --nav-h: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Shippori Mincho', serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { background: none; border: none; cursor: pointer; font-family: inherit; color: inherit; }
+input, select, textarea { font-family: inherit; }
+select { appearance: none; -webkit-appearance: none; }
+
+/* ── Layout Shell ── */
+#app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--safe-top);
+  overflow: hidden;
+}
+#screen-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.screen.active {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+.screen-inner {
+  padding: 16px 16px calc(var(--nav-h) + var(--safe-bottom) + 24px);
+  min-height: 100%;
+}
+
+/* ── Bottom Nav ── */
+#bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(17,16,9,0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  z-index: 100;
+}
+.nav-btn {
+  flex: 1;
+  height: var(--nav-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-btn .nav-icon { font-size: 20px; line-height: 1; }
+.nav-btn .nav-label { font-size: 9px; letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace; }
+.nav-badge {
+  position: absolute;
+  top: 8px; right: calc(50% - 18px);
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 14px;
+}
+
+/* ── Page Header ── */
+.page-header {
+  padding: 20px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.page-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.page-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* ── Cards & Panels ── */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* ── Form Controls ── */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 13px 14px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--gold); }
+.form-textarea { resize: none; min-height: 80px; line-height: 1.6; }
+.form-select-wrap { position: relative; }
+.form-select-wrap::after {
+  content: '▾';
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  padding: 11px 18px;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn:active { opacity: 0.7; transform: scale(0.97); }
+.btn-primary {
+  background: var(--gold);
+  color: var(--ink);
+  font-weight: 700;
+}
+.btn-primary:disabled { background: var(--gold-dim); opacity: 0.6; }
+.btn-full { width: 100%; padding: 15px; font-size: 14px; }
+.btn-ghost { color: var(--text-dim); background: var(--bg3); }
+.btn-success { background: var(--green-bg); color: #7bc87b; border: 1px solid #2a4a2a; }
+.btn-danger { background: var(--red-bg); color: #c87b7b; border: 1px solid #4a2a2a; }
+.btn-sm { padding: 7px 12px; font-size: 11px; }
+.btn-icon { padding: 10px; border-radius: 8px; background: var(--bg3); }
+
+/* ── Item Cards ── */
+.item-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+  will-change: transform;
+}
+.item-card.approved { background: #0c160c; border-color: #1e3a1e; }
+.item-card.rejected { background: #160c0c; border-color: #3a1e1e; opacity: 0.5; }
+.item-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg3);
+  border-radius: 100px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.topic-badge {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+.item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.item-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.6;
+}
+.item-content {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  margin-bottom: 10px;
+}
+.item-tip {
+  font-size: 12px;
+  color: var(--blue);
+  border-left: 2px solid var(--blue);
+  padding: 4px 10px;
+  margin-bottom: 10px;
+  background: var(--blue-bg);
+  border-radius: 0 6px 6px 0;
+  line-height: 1.6;
+}
+.tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.tag {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 100px;
+  padding: 2px 9px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.action-row .btn { flex: 1; }
+
+/* ── Stats ── */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+.stat-num { font-family: 'DM Serif Display', serif; font-size: 28px; line-height: 1; margin-bottom: 4px; }
+.stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; color: var(--text-muted); }
+
+/* ── Search Bar ── */
+.search-wrap { position: relative; margin-bottom: 12px; }
+.search-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 12px 14px 12px 40px;
+  font-size: 14px;
+  outline: none;
+}
+.search-input:focus { border-color: var(--gold); }
+.search-icon {
+  position: absolute;
+  left: 13px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* ── Filter Chips ── */
+.chip-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 100px;
+  border: 1px solid var(--border2);
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  color: var(--text-dim);
+  background: var(--bg2);
+  transition: all 0.15s;
+}
+.chip.active { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 700; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed;
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
+  left: 16px; right: 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text);
+  z-index: 200;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Loading ── */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(201,149,60,0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,12,9,0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  gap: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.loading-overlay.show { opacity: 1; pointer-events: all; }
+.loading-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); letter-spacing: 0.1em; }
+
+/* ── Expand animation ── */
+.expand-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+.expand-body.open { max-height: 800px; }
+
+/* ── Settings ── */
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 13px; color: var(--text-dim); }
+.setting-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.api-key-input-wrap { position: relative; }
+.api-key-input { padding-right: 50px !important; }
+.toggle-key-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; }
+
+/* ── Empty State ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-title { font-size: 15px; color: var(--text-dim); margin-bottom: 6px; }
+.empty-desc { font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7; }
+
+/* ── Workflow Banner ── */
+.workflow-banner {
+  background: linear-gradient(135deg, #1a1508, #12100a);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  font-family: 'JetBrains Mono', monospace;
+}
+.workflow-banner .wf-step { color: var(--gold); }
+
+/* ── Sheet Modal ── */
+#sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 400;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+#sheet-overlay.show { opacity: 1; pointer-events: all; }
+#sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border2);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(var(--safe-bottom) + 20px);
+  z-index: 401;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  max-height: 80dvh;
+  overflow-y: auto;
+}
+#sheet.show { transform: translateY(0); }
+#sheet .sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  margin: -8px auto 18px;
+}
+</style>
+
+</head>
+<body>
+
+<div id="app">
+  <div id="screen-area">
+
+```
+<!-- ★ SCREEN: Generate ── -->
+<div class="screen active" id="screen-generate">
+  <div class="screen-inner">
+    <div class="page-header">
+      <div class="page-subtitle">Literary Research</div>
+      <div class="page-title">事例を生成</div>
+    </div>
+
+    <div class="stats-grid" id="stats-row"></div>
+
+    <div class="workflow-banner">
+      <span class="wf-step">① 生成</span> テーマ入力 →
+      <span class="wf-step">② 選別</span> 収集DBで仕分け →
+      <span class="wf-step">③ 蓄積</span> 実用DBに登録
+    </div>
+
+    <div class="panel">
+      <div class="form-group">
+        <label class="form-label">リサーチテーマ</label>
+        <textarea id="inp-topic" class="form-textarea" rows="3"
+          placeholder="例：江戸時代の武士の日常&#10;雨の夜の情景&#10;緊張した尋問シーン"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">カテゴリ</label>
+          <div class="form-select-wrap">
+            <select id="inp-cat" class="form-select">
+              <option value="expression">✍️ 表現・描写</option>
+              <option value="trivia">💡 小ネタ・薀蓄</option>
+              <option value="reality">🔍 リアリティ・考証</option>
+              <option value="emotion">🌊 心理・感情</option>
+              <option value="setting">🏙️ 情景・世界観</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">件数</label>
+          <div class="form-select-wrap">
+            <select id="inp-count" class="form-select">
+              <option value="5">5件</option>
+              <option value="8" selected>8件</option>
+              <option value="10">10件</option>
+              <option value="15">15件</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-generate" onclick="handleGenerate()">
+        <span style="font-size:15px">⚡</span> 事例を生成する
+      </button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">活用のコツ</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="color:var(--gold);font-size:12px;font-family:'JetBrains Mono',monospace;min-width:60px">量産期</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.7">カテゴリを変えながら繰り返し実行。大量の素材を蓄積する。</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="color:var(--gold);font-size:12px;font-family:'JetBrains Mono',monospace;min-width:60px">選別期</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.7">収集DBで質の高い事例のみを承認し、実用DBへ昇格させる。</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="color:var(--gold);font-size:12px;font-family:'JetBrains Mono',monospace;min-width:60px">活用期</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.7">執筆中に実用DBを検索して表現・考証の参考にする。</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ★ SCREEN: Collection ── -->
+<div class="screen" id="screen-collection">
+  <div class="screen-inner">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div>
+        <div class="page-subtitle">Step 2</div>
+        <div class="page-title">収集DB</div>
+      </div>
+      <button class="btn btn-success btn-sm" onclick="approveAll()">全件承認</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="coll-search" placeholder="キーワード検索…" oninput="renderCollection()">
+    </div>
+    <div class="chip-row" id="coll-cats"></div>
+    <div id="coll-list"></div>
+  </div>
+</div>
+
+<!-- ★ SCREEN: Practical DB ── -->
+<div class="screen" id="screen-practical">
+  <div class="screen-inner">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div>
+        <div class="page-subtitle">Step 3</div>
+        <div class="page-title">実用DB</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="prac-search" placeholder="キーワード検索…" oninput="renderPractical()">
+    </div>
+    <div class="chip-row" id="prac-cats"></div>
+    <div id="prac-list"></div>
+  </div>
+</div>
+
+<!-- ★ SCREEN: Settings ── -->
+<div class="screen" id="screen-settings">
+  <div class="screen-inner">
+    <div class="page-header">
+      <div class="page-subtitle">Configuration</div>
+      <div class="page-title">設定</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Anthropic APIキー</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.7">
+        Claude APIを利用するために必要です。
+        <a href="https://console.anthropic.com" target="_blank" style="color:var(--gold)">console.anthropic.com</a> から取得してください。
+      </p>
+      <div class="form-group api-key-input-wrap">
+        <input type="password" id="inp-apikey" class="form-input api-key-input"
+          placeholder="sk-ant-api03-..." value="">
+        <button class="toggle-key-btn" onclick="toggleKeyVisibility()">👁</button>
+      </div>
+      <button class="btn btn-primary" onclick="saveApiKey()">保存する</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">データ管理</div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">総事例数</div>
+          <div class="setting-value" id="set-total">0件</div>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">実用DB登録数</div>
+          <div class="setting-value" id="set-approved">0件</div>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">データをリセット</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="resetData()">リセット</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">アプリについて</div>
+      <p style="font-size:12px;color:var(--text-muted);line-height:1.8">
+        小説執筆のための事例リサーチDB。<br>
+        Claude APIを使い大量の事例を自動生成し、厳選した素材だけを実用DBに蓄積するツールです。<br><br>
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:10px">
+          Version 1.0.0 · 文庫リサーチDB
+        </span>
+      </p>
+    </div>
+  </div>
+</div>
+```
+
+  </div><!-- /screen-area -->
+
+  <!-- Bottom Nav -->
+
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-screen="generate" onclick="switchTab('generate')">
+      <span class="nav-icon">⚡</span>
+      <span class="nav-label">生成</span>
+    </button>
+    <button class="nav-btn" data-screen="collection" onclick="switchTab('collection')">
+      <span class="nav-icon">📥</span>
+      <span class="nav-label">収集DB</span>
+      <span class="nav-badge" id="badge-pending" style="display:none"></span>
+    </button>
+    <button class="nav-btn" data-screen="practical" onclick="switchTab('practical')">
+      <span class="nav-icon">⭐</span>
+      <span class="nav-label">実用DB</span>
+      <span class="nav-badge" id="badge-approved" style="display:none"></span>
+    </button>
+    <button class="nav-btn" data-screen="settings" onclick="switchTab('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">設定</span>
+    </button>
+  </nav>
+</div><!-- /app -->
+
+<!-- Loading Overlay -->
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
+  <div class="loading-text" id="loading-text">生成中…</div>
+</div>
+
+<!-- Toast -->
+
+<div id="toast"></div>
+
+<!-- Detail Sheet -->
+
+<div id="sheet-overlay" onclick="closeSheet()"></div>
+<div id="sheet">
+  <div class="sheet-handle"></div>
+  <div id="sheet-content"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+const STORAGE_KEY = 'litdb_v1';
+const APIKEY_KEY  = 'litdb_apikey';
+
+let state = {
+  items: [],
+  collCat: 'all',
+  pracCat: 'all',
+  expandedId: null,
+};
+
+const CATEGORIES = [
+  { id: 'expression', label: '表現・描写', icon: '✍️', color: '#c9953c' },
+  { id: 'trivia',     label: '小ネタ',     icon: '💡', color: '#6baed6' },
+  { id: 'reality',    label: 'リアリティ', icon: '🔍', color: '#74c476' },
+  { id: 'emotion',    label: '心理・感情', icon: '🌊', color: '#9e7fc9' },
+  { id: 'setting',    label: '情景・世界観',icon: '🏙️', color: '#f08080' },
+];
+const CAT = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+
+// ── Persist ──
+function loadData() {
+  try { state.items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { state.items = []; }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+}
+function getApiKey() { return localStorage.getItem(APIKEY_KEY) || ''; }
+function saveApiKey() {
+  const v = document.getElementById('inp-apikey').value.trim();
+  if (!v) { toast('APIキーを入力してください'); return; }
+  localStorage.setItem(APIKEY_KEY, v);
+  toast('✅ APIキーを保存しました');
+}
+function toggleKeyVisibility() {
+  const inp = document.getElementById('inp-apikey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ══════════════════════════════════════════════
+// UI Helpers
+// ══════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+  if (name === 'collection') renderCollection();
+  if (name === 'practical')  renderPractical();
+  if (name === 'settings')   renderSettings();
+  if (name === 'generate')   renderStats();
+}
+
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function showLoading(text = '生成中…') {
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+function openSheet(html) {
+  document.getElementById('sheet-content').innerHTML = html;
+  document.getElementById('sheet-overlay').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+}
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════
+// Claude API
+// ══════════════════════════════════════════════
+async function callClaude(prompt, system) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error('APIキーが設定されていません。設定タブから入力してください。');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `APIエラー ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.map(b => b.text || '').join('') || '';
+}
+
+async function generateItems(topic, category, count) {
+  const catLabel = CAT[category]?.label || category;
+  const system = `あなたは小説家のリサーチアシスタントです。
+指定テーマについて小説執筆に役立つ具体的な事例・表現・知識を生成します。
+必ずJSON配列のみを返してください。前置きや説明文は一切不要です。
+形式: [{"title":"タイトル","content":"詳細内容100-200字","tags":["タグ1","タグ2","タグ3"],"tip":"執筆活用ヒント30-50字"}]`;
+
+  const prompt = `テーマ「${topic}」について、カテゴリ「${catLabel}」の事例を${count}件、JSON配列で生成してください。
+各事例は小説のリアリティや表現力を高める具体的で独自性のある内容にしてください。`;
+
+  const raw = await callClaude(prompt, system);
+  let parsed = [];
+  try {
+    const clean = raw.replace(/```json|```/g, '').trim();
+    parsed = JSON.parse(clean);
+  } catch {
+    const m = raw.match(/\[[\s\S]*\]/);
+    if (m) try { parsed = JSON.parse(m[0]); } catch {}
+  }
+
+  return parsed.map((item, i) => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}-${i}`,
+    category,
+    title: item.title || `事例 ${i + 1}`,
+    content: item.content || '',
+    tags: Array.isArray(item.tags) ? item.tags : [],
+    tip: item.tip || '',
+    topic: topic.split('\n')[0].slice(0, 20),
+    status: 'pending',
+    createdAt: Date.now(),
+  }));
+}
+
+// ══════════════════════════════════════════════
+// Actions
+// ══════════════════════════════════════════════
+async function handleGenerate() {
+  const topic = document.getElementById('inp-topic').value.trim();
+  const category = document.getElementById('inp-cat').value;
+  const count = parseInt(document.getElementById('inp-count').value);
+
+  if (!topic) { toast('テーマを入力してください'); return; }
+  if (!getApiKey()) { toast('⚙️ 設定タブでAPIキーを入力してください'); switchTab('settings'); return; }
+
+  showLoading('Claude に問い合わせ中…');
+  try {
+    const newItems = await generateItems(topic, category, count);
+    state.items = [...state.items, ...newItems];
+    saveData();
+    renderStats();
+    updateBadges();
+    hideLoading();
+    toast(`✅ ${newItems.length}件を収集DBに追加しました`);
+    switchTab('collection');
+  } catch (e) {
+    hideLoading();
+    toast('❌ ' + e.message, 4000);
+  }
+}
+
+function updateStatus(id, status) {
+  state.items = state.items.map(i => i.id === id ? { ...i, status } : i);
+  saveData();
+  updateBadges();
+}
+
+function deleteItem(id) {
+  state.items = state.items.filter(i => i.id !== id);
+  saveData();
+  updateBadges();
+  renderCollection();
+  renderPractical();
+}
+
+function approveAll() {
+  const pending = state.items.filter(i => i.status === 'pending');
+  if (pending.length === 0) { toast('未選別の事例はありません'); return; }
+  state.items = state.items.map(i => i.status === 'pending' ? { ...i, status: 'approved' } : i);
+  saveData();
+  updateBadges();
+  renderCollection();
+  toast(`✅ ${pending.length}件を全て承認しました`);
+}
+
+function resetData() {
+  if (!confirm('全データを削除しますか？この操作は取り消せません。')) return;
+  state.items = [];
+  saveData();
+  updateBadges();
+  renderStats();
+  renderCollection();
+  renderPractical();
+  renderSettings();
+  toast('🗑 データをリセットしました');
+}
+
+function exportCSV() {
+  const approved = state.items.filter(i => i.status === 'approved');
+  if (approved.length === 0) { toast('実用DBにデータがありません'); return; }
+  const rows = [['タイトル','カテゴリ','テーマ','内容','タグ','活用ヒント','登録日']];
+  approved.forEach(i => rows.push([
+    i.title, CAT[i.category]?.label || i.category, i.topic,
+    i.content, i.tags.join(' / '), i.tip,
+    new Date(i.createdAt).toLocaleDateString('ja-JP'),
+  ]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'literary_db.csv'; a.click();
+  toast('⬇ CSVをダウンロードしました');
+}
+
+// ══════════════════════════════════════════════
+// Render
+// ══════════════════════════════════════════════
+function updateBadges() {
+  const pending  = state.items.filter(i => i.status === 'pending').length;
+  const approved = state.items.filter(i => i.status === 'approved').length;
+  const pb = document.getElementById('badge-pending');
+  const ab = document.getElementById('badge-approved');
+  pb.textContent = pending;  pb.style.display  = pending  ? '' : 'none';
+  ab.textContent = approved; ab.style.display  = approved ? '' : 'none';
+}
+
+function renderStats() {
+  const pending  = state.items.filter(i => i.status === 'pending').length;
+  const approved = state.items.filter(i => i.status === 'approved').length;
+  const rejected = state.items.filter(i => i.status === 'rejected').length;
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--gold)">${pending}</div>
+      <div class="stat-label">未選別</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#74c476">${approved}</div>
+      <div class="stat-label">実用DB</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#c87b7b">${rejected}</div>
+      <div class="stat-label">除外済み</div>
+    </div>`;
+}
+
+function renderSettings() {
+  document.getElementById('set-total').textContent = state.items.length + '件';
+  document.getElementById('set-approved').textContent = state.items.filter(i=>i.status==='approved').length + '件';
+  const key = getApiKey();
+  document.getElementById('inp-apikey').value = key;
+}
+
+function getFilteredItems(status, catFilter, searchQ) {
+  return state.items.filter(i => {
+    if (i.status !== status) return false;
+    if (catFilter !== 'all' && i.category !== catFilter) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      return i.title.includes(q) || i.content.includes(q) || i.topic.includes(q) || i.tags.some(t => t.includes(q));
+    }
+    return true;
+  });
+}
+
+function renderCatChips(containerId, currentCat, items, setter, renderer) {
+  const counts = {};
+  items.forEach(i => { counts[i.category] = (counts[i.category]||0)+1; });
+  const total = items.length;
+  let html = `<div class="chip ${currentCat==='all'?'active':''}" onclick="${setter}('all');${renderer}()"># 全て <span style="opacity:.6">${total}</span></div>`;
+  CATEGORIES.filter(c => counts[c.id]).forEach(c => {
+    html += `<div class="chip ${currentCat===c.id?'active':''}" onclick="${setter}('${c.id}');${renderer}()">${c.icon} ${c.label} <span style="opacity:.6">${counts[c.id]}</span></div>`;
+  });
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function renderCollection() {
+  const q     = document.getElementById('coll-search')?.value || '';
+  const items = getFilteredItems('pending', state.collCat, q);
+  const all   = state.items.filter(i => i.status === 'pending');
+  renderCatChips('coll-cats', state.collCat, all, 'setCollCat', 'renderCollection');
+  const el = document.getElementById('coll-list');
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📥</div><div class="empty-title">未選別の事例はありません</div><div class="empty-desc">生成タブでリサーチを実行すると<br>ここに事例が追加されます</div></div>`;
+    return;
+  }
+  el.innerHTML = items.map(item => renderCard(item, 'collection')).join('');
+}
+
+function renderPractical() {
+  const q     = document.getElementById('prac-search')?.value || '';
+  const items = getFilteredItems('approved', state.pracCat, q);
+  const all   = state.items.filter(i => i.status === 'approved');
+  renderCatChips('prac-cats', state.pracCat, all, 'setPracCat', 'renderPractical');
+  const el = document.getElementById('prac-list');
+  if (items.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⭐</div><div class="empty-title">実用DBはまだ空です</div><div class="empty-desc">収集DBで事例を承認すると<br>ここに蓄積されます</div></div>`;
+    return;
+  }
+  el.innerHTML = items.map(item => renderCard(item, 'practical')).join('');
+}
+
+function renderCard(item, mode) {
+  const cat = CAT[item.category] || {};
+  const actions = mode === 'collection'
+    ? `<button class="btn btn-success" style="flex:1" onclick="approveItem('${item.id}')">✓ 承認</button>
+       <button class="btn btn-danger"  style="flex:1" onclick="rejectItem('${item.id}')">✗ 除外</button>
+       <button class="btn btn-icon" onclick="confirmDelete('${item.id}')">🗑</button>`
+    : `<button class="btn btn-ghost" style="flex:1" onclick="updateStatus('${item.id}','pending');renderPractical();renderCollection()">↩ 戻す</button>
+       <button class="btn btn-icon" onclick="confirmDelete('${item.id}')">🗑</button>`;
+
+  return `
+<div class="item-card ${item.status}" id="card-${item.id}">
+  <div class="item-card-header">
+    <span class="cat-badge" style="color:${cat.color||'var(--text-dim)'}">${cat.icon||''} ${cat.label||''}</span>
+    <span class="topic-badge">#${item.topic}</span>
+  </div>
+  <div class="item-title" onclick="showDetail('${item.id}')">${item.title}</div>
+  <div class="item-preview" onclick="showDetail('${item.id}')">${item.content}</div>
+  <div class="action-row">${actions}</div>
+</div>`;
+}
+
+function showDetail(id) {
+  const item = state.items.find(i => i.id === id);
+  if (!item) return;
+  const cat = CAT[item.category] || {};
+  const tags = item.tags.map(t => `<span class="tag">${t}</span>`).join('');
+  openSheet(`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span class="cat-badge" style="color:${cat.color||''}">${cat.icon||''} ${cat.label||''}</span>
+      <span class="topic-badge">#${item.topic}</span>
+    </div>
+    <div class="item-title" style="font-size:16px;margin-bottom:12px">${item.title}</div>
+    <div class="item-content">${item.content}</div>
+    ${item.tip ? `<div class="item-tip">💡 ${item.tip}</div>` : ''}
+    ${tags ? `<div class="tags-row">${tags}</div>` : ''}
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:8px">
+      ${new Date(item.createdAt).toLocaleDateString('ja-JP')}
+    </div>
+  `);
+}
+
+function approveItem(id) {
+  updateStatus(id, 'approved');
+  const el = document.getElementById('card-' + id);
+  if (el) { el.style.transition = 'opacity .2s,transform .2s'; el.style.opacity = '0'; el.style.transform = 'translateX(40px)'; setTimeout(() => { renderCollection(); }, 220); }
+  toast('✅ 実用DBに登録しました');
+}
+function rejectItem(id) {
+  updateStatus(id, 'rejected');
+  const el = document.getElementById('card-' + id);
+  if (el) { el.style.transition = 'opacity .2s,transform .2s'; el.style.opacity = '0'; el.style.transform = 'translateX(-40px)'; setTimeout(() => { renderCollection(); }, 220); }
+}
+function confirmDelete(id) {
+  if (!confirm('この事例を削除しますか？')) return;
+  deleteItem(id);
+}
+
+function setCollCat(v) { state.collCat = v; }
+function setPracCat(v) { state.pracCat = v; }
+
+// ══════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════
+loadData();
+renderStats();
+updateBadges();
+
+// service worker registration for PWA
+if ('serviceWorker' in navigator) {
+  const sw = `
+const CACHE='litdb-v1';
+const ASSETS=['/'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll([]))));
+self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))));`;
+  const blob = new Blob([sw], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+</script>
+
+</body>
+</html>
